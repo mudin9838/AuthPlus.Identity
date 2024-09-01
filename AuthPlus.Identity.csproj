@@ -12,7 +12,7 @@
     <Company>Self Employed</Company>
     <Description>AuthPlus.Identity is a .NET 8 class library designed for user authentication and authorization management.</Description>
     <PackageTags>authentication authorization identity</PackageTags>
-    <RepositoryUrl>https://github.com/YourGitHubUsername/YourRepoName</RepositoryUrl>
+    <RepositoryUrl>https://github.com/mudin9838/AuthPlus.Identity</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 

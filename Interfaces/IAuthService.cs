@@ -1,4 +1,5 @@
 ﻿using AuthPlus.Identity.Dtos;
+using Microsoft.AspNetCore.Identity;
 
 namespace AuthPlus.Identity.Interfaces;
 public interface IAuthService
@@ -8,4 +9,5 @@ public interface IAuthService
     Task<AuthenticationResult> RefreshTokenAsync(RefreshTokenDto refreshTokenDto);
     Task<AuthenticationResult> ResetPasswordAsync(ResetPasswordDto resetPasswordDto);
     Task SendResetPasswordEmailAsync(ForgotPasswordDto forgotPasswordDto);
+    Task<IdentityResult> ConfirmEmailAsync(string token, string userId);
 }

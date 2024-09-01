@@ -1,5 +1,6 @@
 ﻿using AuthPlus.Identity.Dtos;
 using AuthPlus.Identity.Interfaces;
+using AuthPlus.Identity.Validators;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthPlus.Identity.Controllers;
@@ -9,26 +10,42 @@ namespace AuthPlus.Identity.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
-
-    public AuthController(IAuthService authService)
+    private readonly IBaseValidator<RegisterDto> _registerDtoValidator;
+    private readonly IBaseValidator<LoginDto> _loginDtoValidator;
+    public AuthController(IAuthService authService, IBaseValidator<RegisterDto> registerDtoValidator, IBaseValidator<LoginDto> loginDtoValidator)
     {
         _authService = authService;
+        _registerDtoValidator = registerDtoValidator;
+        _loginDtoValidator = loginDtoValidator;
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
     {
+        var validationResult = await _loginDtoValidator.ValidateAsync(loginDto);
+
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+        }
+
         var result = await _authService.LoginAsync(loginDto);
-        return result.Succeeded ? Ok(result) : Unauthorized(result.Errors);
+        return result.Succeeded ? Ok(result) : BadRequest(result.Errors);
     }
 
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
     {
-        var result = await _authService.RegisterAsync(registerDto);
-        return result.Succeeded ? Ok("User registered successfully") : BadRequest(result.Errors);
-    }
+        var validationResult = await _registerDtoValidator.ValidateAsync(registerDto);
 
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+        }
+
+        var result = await _authService.RegisterAsync(registerDto);
+        return result.Succeeded ? Ok(result) : BadRequest(result.Errors);
+    }
     [HttpPost("refresh-token")]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenDto refreshTokenDto)
     {

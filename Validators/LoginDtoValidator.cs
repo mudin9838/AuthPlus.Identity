@@ -3,7 +3,7 @@ using FluentValidation;
 
 namespace AuthPlus.Identity.Validators;
 
-public class LoginDtoValidator : AbstractValidator<LoginDto>
+public class LoginDtoValidator : BaseValidator<LoginDto>
 {
     public LoginDtoValidator()
     {

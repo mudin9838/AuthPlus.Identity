@@ -13,7 +13,28 @@ public class UserService : IUserService
     {
         _userManager = userManager;
     }
+    public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
+    {
+        var users = _userManager.Users.ToList();
+        var userDtos = new List<UserDto>();
 
+        foreach (var user in users)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            userDtos.Add(new UserDto
+            {
+                Id = user.Id,
+                UserName = user.UserName,
+                Email = user.Email,
+                FullName = user.FullName,
+                ProfileImageUrl = user.ProfileImageUrl,
+                EmailConfirmed = user.EmailConfirmed,
+                Roles = roles.ToArray()
+            });
+        }
+
+        return userDtos;
+    }
     public async Task<UserDto> GetUserByIdAsync(string userId)
     {
         var user = await _userManager.FindByIdAsync(userId);
@@ -54,17 +75,42 @@ public class UserService : IUserService
         return userDto;
     }
 
-    public async Task UpdateUserAsync(string userId, UserDto userDto)
+    public async Task<IdentityResult> UpdateUserAsync(string userId, UserDto userDto)
     {
         var user = await _userManager.FindByIdAsync(userId);
-        if (user != null)
+        if (user == null)
         {
-            user.UserName = userDto.UserName;
-            user.Email = userDto.Email;
-            user.FullName = userDto.FullName;
-            user.ProfileImageUrl = userDto.ProfileImageUrl;
-            await _userManager.UpdateAsync(user);
+            return IdentityResult.Failed(new IdentityError { Description = "User not found." });
         }
+
+        // Update user details
+        user.UserName = userDto.UserName ?? user.UserName;
+        user.Email = userDto.Email ?? user.Email;
+        user.FullName = userDto.FullName ?? user.FullName;
+        user.ProfileImageUrl = userDto.ProfileImageUrl ?? user.ProfileImageUrl;
+
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            return result;
+        }
+
+        // Handle password change if provided
+        if (!string.IsNullOrEmpty(userDto.CurrentPassword) && !string.IsNullOrEmpty(userDto.NewPassword))
+        {
+            if (userDto.NewPassword != userDto.ConfirmNewPassword)
+            {
+                return IdentityResult.Failed(new IdentityError { Description = "New passwords do not match." });
+            }
+
+            var changePasswordResult = await _userManager.ChangePasswordAsync(user, userDto.CurrentPassword, userDto.NewPassword);
+            if (!changePasswordResult.Succeeded)
+            {
+                return changePasswordResult;
+            }
+        }
+
+        return IdentityResult.Success;
     }
 
     public async Task DeleteUserAsync(string userId)

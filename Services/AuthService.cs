@@ -21,6 +21,15 @@ public class AuthService : IAuthService
 
     public async Task<AuthenticationResult> RegisterAsync(RegisterDto registerDto)
     {
+        if (registerDto.Password != registerDto.ConfirmPassword)
+        {
+            return new AuthenticationResult
+            {
+                Succeeded = false,
+                Errors = new[] { "Passwords do not match." }
+            };
+        }
+
         var user = new ApplicationUser
         {
             UserName = registerDto.UserName,
@@ -40,23 +49,31 @@ public class AuthService : IAuthService
             };
         }
 
-        var roles = registerDto.Roles ?? Array.Empty<string>();
+        var roles = registerDto.Roles ?? new[] { "User" };
         await _userManager.AddToRolesAsync(user, roles);
 
-        var token = _jwtHelper.GenerateToken(user.UserName, roles);
+        // Generate email confirmation token
+        var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+        var confirmationLink = $"https://yourapp.com/confirm-email?token={token}&userId={user.Id}";
+
+        // Send confirmation email
+        var subject = "Confirm Your Email";
+        var body = $"Please confirm your account by clicking this link: <a href='{confirmationLink}'>Confirm Email</a>";
+        await _emailService.SendEmailAsync(user.Email, subject, body);
+
+        var jwtToken = _jwtHelper.GenerateToken(user.UserName, roles);
         var refreshToken = Guid.NewGuid().ToString(); // Simplified refresh token generation
 
         return new AuthenticationResult
         {
             Succeeded = true,
-            Token = token,
+            Token = jwtToken,
             RefreshToken = refreshToken,
             UserName = user.UserName,
             Roles = roles,
             ProfileImageUrl = user.ProfileImageUrl
         };
     }
-
     public async Task<AuthenticationResult> LoginAsync(LoginDto loginDto)
     {
         var user = await _userManager.FindByNameAsync(loginDto.UserName);
@@ -93,7 +110,13 @@ public class AuthService : IAuthService
             ProfileImageUrl = user.ProfileImageUrl
         };
     }
-
+    public async Task<IdentityResult> ConfirmEmailAsync(string token, string userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        return user == null
+            ? IdentityResult.Failed(new IdentityError { Description = "Invalid user ID." })
+            : await _userManager.ConfirmEmailAsync(user, token);
+    }
     public async Task<AuthenticationResult> RefreshTokenAsync(RefreshTokenDto refreshTokenDto)
     {
         // Extract user name from the refresh token

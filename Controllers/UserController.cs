@@ -1,6 +1,7 @@
 ﻿using AuthPlus.Identity.Dtos;
 using AuthPlus.Identity.Extensions;
 using AuthPlus.Identity.Interfaces;
+using AuthPlus.Identity.Validators;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,12 +13,33 @@ namespace AuthPlus.Identity.Controllers;
 public class UserController : ControllerBase
 {
     private readonly IUserService _userService;
-
-    public UserController(IUserService userService)
+    private readonly IAuthService _authService;
+    private readonly IBaseValidator<UserDto> _userDtoValidator;
+    public UserController(IUserService userService, IAuthService authService, IBaseValidator<UserDto> userDtoValidator)
     {
         _userService = userService;
+        _authService = authService;
+        _userDtoValidator = userDtoValidator;
     }
 
+    [HttpGet("confirm-email")]
+    public async Task<IActionResult> ConfirmEmail(string token, string userId)
+    {
+        var user = await _userService.GetUserByIdAsync(userId);
+        if (user == null)
+        {
+            return BadRequest("Invalid user ID.");
+        }
+
+        var result = await _authService.ConfirmEmailAsync(token, userId);
+        return result.Succeeded ? Ok("Email confirmed successfully.") : BadRequest("Error confirming email.");
+    }
+    [HttpGet]
+    public async Task<IActionResult> GetAllUsers()
+    {
+        var users = await _userService.GetAllUsersAsync();
+        return Ok(users);
+    }
     [HttpGet("{id}")]
     public async Task<IActionResult> GetUser(string id)
     {
@@ -38,9 +60,17 @@ public class UserController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateUser(string id, [FromBody] UserDto userDto)
     {
-        await _userService.UpdateUserAsync(id, userDto);
-        return Ok("User updated successfully");
+        var validationResult = await _userDtoValidator.ValidateAsync(userDto);
+
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+        }
+
+        var result = await _userService.UpdateUserAsync(id, userDto);
+        return result.Succeeded ? Ok("User updated successfully") : BadRequest(result.Errors.Select(e => e.Description));
     }
+
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(string id)

@@ -2,6 +2,7 @@
 using AuthPlus.Identity.Entities;
 using AuthPlus.Identity.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace AuthPlus.Identity.Services;
 
@@ -13,7 +14,15 @@ public class RoleService : IRoleService
     {
         _roleManager = roleManager;
     }
-
+    public async Task<IEnumerable<RoleDto>> GetAllRolesAsync()
+    {
+        var roles = _roleManager.Roles;
+        return await roles.Select(role => new RoleDto
+        {
+            Name = role.Name,
+            Description = role.Description
+        }).ToListAsync();
+    }
     public async Task<RoleDto> GetRoleByIdAsync(string id)
     {
         var role = await _roleManager.FindByIdAsync(id);

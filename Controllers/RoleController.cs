@@ -17,7 +17,12 @@ public class RoleController : ControllerBase
     {
         _roleService = roleService;
     }
-
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAllRoles()
+    {
+        var roles = await _roleService.GetAllRolesAsync();
+        return Ok(roles);
+    }
     [HttpGet("{id}")]
     public async Task<IActionResult> GetRole(string id)
     {

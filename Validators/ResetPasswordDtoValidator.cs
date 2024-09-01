@@ -3,7 +3,7 @@ using FluentValidation;
 
 namespace AuthPlus.Identity.Validators;
 
-public class ResetPasswordDtoValidator : AbstractValidator<ResetPasswordDto>
+public class ResetPasswordDtoValidator : BaseValidator<ResetPasswordDto>
 {
     public ResetPasswordDtoValidator()
     {

@@ -3,6 +3,7 @@ using AuthPlus.Identity.Entities;
 using AuthPlus.Identity.Interfaces;
 using AuthPlus.Identity.Helpers;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 
 namespace AuthPlus.Identity.Services;
 
@@ -11,12 +12,14 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly JwtHelper _jwtHelper;
     private readonly IEmailService _emailService;
+    private readonly EmailSettings _emailSettings;
 
-    public AuthService(UserManager<ApplicationUser> userManager, JwtHelper jwtHelper, IEmailService emailService)
+    public AuthService(UserManager<ApplicationUser> userManager, JwtHelper jwtHelper, IEmailService emailService, IOptions<EmailSettings> emailSettings)
     {
         _userManager = userManager;
         _jwtHelper = jwtHelper;
         _emailService = emailService;
+        _emailSettings = emailSettings.Value;
     }
 
     public async Task<AuthenticationResult> RegisterAsync(RegisterDto registerDto)
@@ -54,7 +57,7 @@ public class AuthService : IAuthService
 
         // Generate email confirmation token
         var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-        var confirmationLink = $"https://yourapp.com/confirm-email?token={token}&userId={user.Id}";
+        var confirmationLink = $"{_emailSettings.BaseUrl}/confirm-email?token={token}&userId={user.Id}";
 
         // Send confirmation email
         var subject = "Confirm Your Email";
@@ -190,7 +193,7 @@ public class AuthService : IAuthService
         }
 
         var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-        var resetLink = $"https://yourapp.com/reset-password?token={token}";
+        var resetLink = $"{_emailSettings.BaseUrl}/reset-password?token={token}";
 
         forgotPasswordDto.ResetLink = resetLink;
         await _emailService.SendPasswordResetEmailAsync(forgotPasswordDto);

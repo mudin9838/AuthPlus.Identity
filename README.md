@@ -70,7 +70,8 @@ dotnet add package AuthPlus.Identity
     "SmtpServer": "smtp.example.com",
     "SmtpPort": 587,
     "SmtpUser": "your-email@example.com",
-    "SmtpPassword": "your-email-password"
+    "SmtpPassword": "your-email-password",
+    "BaseUrl": "your base url"
   }
 
 
@@ -126,7 +127,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
-//Add custom authorization policies 
+//Add custom authorization policies
 builder.Services.AddAuthorizationPolicies();
 // Add additional custom policies
 builder.Services.AddAuthorization(options =>

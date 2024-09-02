@@ -26,7 +26,7 @@ public class AuthService : IAuthService
             return new AuthenticationResult
             {
                 Succeeded = false,
-                Errors = new[] { "Passwords do not match." }
+                Errors = ["Passwords do not match."]
             };
         }
 
@@ -49,7 +49,7 @@ public class AuthService : IAuthService
             };
         }
 
-        var roles = registerDto.Roles ?? new[] { "User" };
+        var roles = registerDto.Roles ?? ["User"];
         await _userManager.AddToRolesAsync(user, roles);
 
         // Generate email confirmation token

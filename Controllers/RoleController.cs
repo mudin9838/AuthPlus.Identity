@@ -1,14 +1,13 @@
 ﻿using AuthPlus.Identity.Dtos;
-using AuthPlus.Identity.Extensions;
 using AuthPlus.Identity.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthPlus.Identity.Controllers;
-
+[Authorize(Policy = "RequireAdminRole")]
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = RoleConstants.AdminRole)]
+
 public class RoleController : ControllerBase
 {
     private readonly IRoleService _roleService;

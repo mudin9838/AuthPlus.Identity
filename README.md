@@ -5,6 +5,7 @@ AuthPlus.Identity is a .NET 8 class library designed to simplify user authentica
 ## Features
 
 - User Registration and Login
+- User Management
 - Password Reset
 - Role Management
 - JWT-Based Authentication
@@ -32,6 +33,7 @@ AuthPlus.Identity is a .NET 8 class library designed to simplify user authentica
 ## Features
 
 - User Registration and Login
+- User Management
 - Password Reset
 - Role Management
 - JWT-Based Authentication
@@ -70,37 +72,71 @@ dotnet add package AuthPlus.Identity
     "SmtpUser": "your-email@example.com",
     "SmtpPassword": "your-email-password"
   }
-}
 
-
-{
-  "JwtSettings": {
-    "SecretKey": "your-secret-key",
-    "Issuer": "your-issuer",
-    "Audience": "your-audience",
-    "ExpirationMinutes": 60
-  },
-  "EmailSettings": {
-    "SmtpServer": "smtp.example.com",
-    "SmtpPort": 587,
-    "SmtpUser": "your-email@example.com",
-    "SmtpPassword": "your-email-password"
-  }
-}
 
 # Setting Up
 ### In your Program.cs, configure the services and middleware:
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure services
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
-builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+
+// Configure EmailSettings
+var emailSettingsSection = builder.Configuration.GetSection("EmailSettings");
+builder.Services.Configure<EmailSettings>(emailSettingsSection);
+
+// Register EmailService with EmailSettings
+builder.Services.AddSingleton<IEmailService>(serviceProvider =>
+{
+    var emailSettings = serviceProvider.GetRequiredService<IOptions<EmailSettings>>().Value;
+    return new EmailService(emailSettings.SmtpServer, emailSettings.SmtpPort, emailSettings.SmtpUser, emailSettings.SmtpPassword);
+});
+
+// Configure JwtHelper
+var jwtSettingsSection = builder.Configuration.GetSection("JwtSettings");
+builder.Services.Configure<JwtSettings>(jwtSettingsSection);
+builder.Services.AddSingleton<JwtHelper>(serviceProvider =>
+{
+    var jwtSettings = serviceProvider.GetRequiredService<IOptions<JwtSettings>>().Value;
+    return new JwtHelper(jwtSettings.SecretKey, jwtSettings.Issuer, jwtSettings.Audience);
+});
+// Register default validators
+services.AddTransient<IBaseValidator<LoginDto>, LoginDtoValidator>();
+services.AddTransient<IBaseValidator<RegisterDto>, RegisterDtoValidator>();
+services.AddTransient<IBaseValidator<ResetPasswordDto>, ResetPasswordDtoValidator>();
+services.AddTransient<IBaseValidator<UserDto>, UserDtoValidator>();
+//// A override or add  own validators
+//services.AddTransient(typeof(IBaseValidator<>), typeof(BaseValidator<>));
+
+
+//you can provide  own validator by overriding the existing on create a new class
+//public class CustomRegisterDtoValidator : RegisterDtoValidator
+//{
+  // public CustomRegisterDtoValidator()
+  // {
+       // Add or override rules here
+      // RuleFor(x => x.Password).Must(password => password.Contains("@")).WithMessage("Password must contain '@'.");
+   //}
+//}
+
+////services.AddTransient<IBaseValidator<RegisterDto>, CustomRegisterDtoValidator>();
+
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserService, UserService>();
+
+//Add custom authorization policies 
+builder.Services.AddAuthorizationPolicies();
+// Add additional custom policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireUserRole", policy =>
+        policy.RequireRole(RoleConstants.AdminRole, RoleConstants.UserRole));
+    options.AddPolicy("RequireAdminRole", policy =>
+       policy.RequireRole(RoleConstants.AdminRole));
+});
+
 
 // Add other services and configure middleware
 

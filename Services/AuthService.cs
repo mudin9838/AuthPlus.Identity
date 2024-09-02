@@ -13,13 +13,15 @@ public class AuthService : IAuthService
     private readonly JwtHelper _jwtHelper;
     private readonly IEmailService _emailService;
     private readonly EmailSettings _emailSettings;
+    private readonly IServiceProvider _serviceProvider;
 
-    public AuthService(UserManager<ApplicationUser> userManager, JwtHelper jwtHelper, IEmailService emailService, IOptions<EmailSettings> emailSettings)
+    public AuthService(UserManager<ApplicationUser> userManager, JwtHelper jwtHelper, IEmailService emailService, IOptions<EmailSettings> emailSettings, IServiceProvider serviceProvider)
     {
         _userManager = userManager;
         _jwtHelper = jwtHelper;
         _emailService = emailService;
         _emailSettings = emailSettings.Value;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task<AuthenticationResult> RegisterAsync(RegisterDto registerDto)
@@ -107,6 +109,67 @@ public class AuthService : IAuthService
         {
             Succeeded = true,
             Token = token,
+            RefreshToken = refreshToken,
+            UserName = user.UserName,
+            Roles = roles.ToArray(),
+            ProfileImageUrl = user.ProfileImageUrl
+        };
+    }
+
+
+    public async Task<AuthenticationResult> ExternalLoginAsync(string provider, string token)
+    {
+        var providerType = provider switch
+        {
+            "Google" => typeof(GoogleAuthProvider),
+            "Microsoft" => typeof(MicrosoftAuthProvider),
+            "LinkedIn" => typeof(LinkedInAuthProvider),
+            _ => null
+        };
+
+        if (providerType == null)
+        {
+            return new AuthenticationResult
+            {
+                Succeeded = false,
+                Errors = new[] { "Unsupported external provider." }
+            };
+        }
+
+        var providerService = (IExternalAuthProvider)_serviceProvider.GetService(providerType);
+        var userInfo = await providerService.GetUserInfoAsync(provider, token);
+
+        if (userInfo == null)
+        {
+            return new AuthenticationResult
+            {
+                Succeeded = false,
+                Errors = new[] { "Invalid external login." }
+            };
+        }
+
+        var user = await _userManager.FindByEmailAsync(userInfo.Email);
+        if (user == null)
+        {
+            // Create a new user if not found
+            user = new ApplicationUser
+            {
+                UserName = userInfo.Name,
+                Email = userInfo.Email,
+                FullName = userInfo.Name,
+                ProfileImageUrl = userInfo.ProfilePictureUrl
+            };
+            await _userManager.CreateAsync(user);
+        }
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var jwtToken = _jwtHelper.GenerateToken(user.UserName, roles.ToArray());
+        var refreshToken = Guid.NewGuid().ToString(); // Simplified refresh token generation
+
+        return new AuthenticationResult
+        {
+            Succeeded = true,
+            Token = jwtToken,
             RefreshToken = refreshToken,
             UserName = user.UserName,
             Roles = roles.ToArray(),

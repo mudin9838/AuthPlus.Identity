@@ -74,13 +74,60 @@ dotnet add package AuthPlus.Identity
     "BaseUrl": "your base url"
   }
 
+//you can add your external service provider by inherit IExternalAuthProvider e.g.
+FacebookAuthProvider.cs:
+public class FacebookAuthProvider : IExternalAuthProvider
+{
+    private readonly HttpClient _httpClient;
 
-# Setting Up
+    public FacebookAuthProvider(HttpClient httpClient)
+    {
+        _httpClient = httpClient;
+    }
+
+    public async Task<ExternalUserInfo> AuthenticateAsync(string accessToken)
+    {
+        // Call Facebook's API to get user info
+        var response = await _httpClient.GetAsync($"https://graph.facebook.com/me?access_token={accessToken}&fields=id,name,email,picture");
+        response.EnsureSuccessStatusCode();
+
+        var content = await response.Content.ReadAsStringAsync();
+        var userData = JObject.Parse(content);
+
+        // Parse the response
+        var email = userData["email"]?.ToString();
+        var name = userData["name"]?.ToString();
+        var profilePictureUrl = userData["picture"]?["data"]?["url"]?.ToString();
+
+        return new ExternalUserInfo
+        {
+            Email = email,
+            Name = name,
+            ProfilePictureUrl = profilePictureUrl
+        };
+    }
+}
+ //then register in startp/program.cs
+ // Register custom external authentication provider (Facebook)
+                services.AddHttpClient<FacebookAuthProvider>();
+
+'
+
+
+## Setting Up
 ### In your Program.cs, configure the services and middleware:
 
 var builder = WebApplication.CreateBuilder(args);
 
-
+// Register external authentication providers
+builder.Services.AddHttpClient<GoogleAuthProvider>();
+builder.Services.AddHttpClient<MicrosoftAuthProvider>();
+builder.Services.AddHttpClient<LinkedInAuthProvider>();
+// AuthService and external providers
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IExternalAuthProvider, GoogleAuthProvider>();
+builder.Services.AddScoped<IExternalAuthProvider, MicrosoftAuthProvider>();
+builder.Services.AddScoped<IExternalAuthProvider, LinkedInAuthProvider>()
 // Configure EmailSettings
 var emailSettingsSection = builder.Configuration.GetSection("EmailSettings");
 builder.Services.Configure<EmailSettings>(emailSettingsSection);

@@ -46,6 +46,13 @@ public class AuthController : ControllerBase
         var result = await _authService.RegisterAsync(registerDto);
         return result.Succeeded ? Ok(result) : BadRequest(result.Errors);
     }
+
+    [HttpPost("external-login")]
+    public async Task<IActionResult> ExternalLogin([FromBody] ExternalLoginDto externalLoginDto)
+    {
+        var result = await _authService.ExternalLoginAsync(externalLoginDto.Provider, externalLoginDto.Token);
+        return result.Succeeded ? Ok(result) : BadRequest(result.Errors);
+    }
     [HttpPost("refresh-token")]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenDto refreshTokenDto)
     {

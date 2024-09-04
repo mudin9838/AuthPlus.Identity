@@ -111,6 +111,27 @@ public class FacebookAuthProvider : IExternalAuthProvider
  // Register custom external authentication provider (Facebook)
                 services.AddHttpClient<FacebookAuthProvider>();
 
+
+
+   //Use Authorization policies your controllers or actions:
+     By default, the package includes the following authorization policies:
+
+     RequireAdminRole: Requires the user to have the "Admin" role.
+     RequireUserRole: Requires the user to have the "User" role.
+
+           [ApiController]
+           [Route("api/[controller]")]
+           public class SomeController : ControllerBase
+           {
+               [Authorize(Policy = "RequireAdminRole")]
+               [HttpGet("admin")]
+               public IActionResult GetAdminData()
+               {
+               return Ok("Admin data.");
+               }
+
+   //then register in startup/program.cs like below
+
 '
 
 
@@ -174,7 +195,8 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
-//Add custom authorization policies
+//Add  authorization policies
+
 builder.Services.AddAuthorizationPolicies();
 // Add additional custom policies
 builder.Services.AddAuthorization(options =>

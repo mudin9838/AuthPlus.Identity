@@ -8,7 +8,7 @@
     <AssemblyName>AuthPlus.Identity</AssemblyName>
     <PackageId>AuthPlus.Identity</PackageId>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <Version>1.0.6</Version>
+    <Version>1.0.7</Version>
     <Authors>Muhdin Mussema</Authors>
     <Company>Self Employed</Company>
     <Description>AuthPlus.Identity is a .NET 8 class library designed for user authentication and authorization management.</Description>

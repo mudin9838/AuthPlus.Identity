@@ -1,6 +1,7 @@
 ﻿using AuthPlus.Identity.Dtos;
 using AuthPlus.Identity.Interfaces;
 using AuthPlus.Identity.Validators;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthPlus.Identity.Controllers;
@@ -18,7 +19,7 @@ public class AuthController : ControllerBase
         _registerDtoValidator = registerDtoValidator;
         _loginDtoValidator = loginDtoValidator;
     }
-
+    [AllowAnonymous]
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
     {
@@ -32,7 +33,7 @@ public class AuthController : ControllerBase
         var result = await _authService.LoginAsync(loginDto);
         return result.Succeeded ? Ok(result) : BadRequest(result.Errors);
     }
-
+    [AllowAnonymous]
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
     {
@@ -46,27 +47,28 @@ public class AuthController : ControllerBase
         var result = await _authService.RegisterAsync(registerDto);
         return result.Succeeded ? Ok(result) : BadRequest(result.Errors);
     }
-
+    [AllowAnonymous]
     [HttpPost("external-login")]
     public async Task<IActionResult> ExternalLogin([FromBody] ExternalLoginDto externalLoginDto)
     {
         var result = await _authService.ExternalLoginAsync(externalLoginDto.Provider, externalLoginDto.Token);
         return result.Succeeded ? Ok(result) : BadRequest(result.Errors);
     }
+    [AllowAnonymous]
     [HttpPost("refresh-token")]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenDto refreshTokenDto)
     {
         var result = await _authService.RefreshTokenAsync(refreshTokenDto);
         return result.Succeeded ? Ok(result) : Unauthorized(result.Errors);
     }
-
+    [AllowAnonymous]
     [HttpPost("forgot-password")]
     public IActionResult ForgotPassword([FromBody] ForgotPasswordDto forgotPasswordDto)
     {
         _authService.SendResetPasswordEmailAsync(forgotPasswordDto);
         return Ok("Reset password email sent");
     }
-
+    [AllowAnonymous]
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto resetPasswordDto)
     {

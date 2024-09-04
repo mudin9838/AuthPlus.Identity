@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthPlus.Identity.Controllers;
-[Authorize(Policy = "RequireAdminRole")]
 [Route("api/[controller]")]
 [ApiController]
 
@@ -34,6 +33,7 @@ public class UserController : ControllerBase
         return result.Succeeded ? Ok("Email confirmed successfully.") : BadRequest("Error confirming email.");
     }
     [HttpGet]
+    [Authorize(Policy = "RequireAdminRole")]
     public async Task<IActionResult> GetAllUsers()
     {
         var users = await _userService.GetAllUsersAsync();
@@ -47,6 +47,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "RequireAdminRole")]
     public async Task<IActionResult> CreateUser([FromBody] UserDto userDto, [FromQuery] string password)
     {
         if (await _userService.UsernameExistsAsync(userDto.UserName))
@@ -72,6 +73,7 @@ public class UserController : ControllerBase
 
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = "RequireAdminRole")]
     public async Task<IActionResult> DeleteUser(string id)
     {
         await _userService.DeleteUserAsync(id);
@@ -79,6 +81,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPost("{userId}/roles/{roleName}")]
+    [Authorize(Policy = "RequireAdminRole")]
     public async Task<IActionResult> AddRoleToUser(string userId, string roleName)
     {
         await _userService.AddRoleToUserAsync(userId, roleName);
@@ -86,6 +89,7 @@ public class UserController : ControllerBase
     }
 
     [HttpDelete("{userId}/roles/{roleName}")]
+    [Authorize(Policy = "RequireAdminRole")]
     public async Task<IActionResult> RemoveRoleFromUser(string userId, string roleName)
     {
         await _userService.RemoveRoleFromUserAsync(userId, roleName);

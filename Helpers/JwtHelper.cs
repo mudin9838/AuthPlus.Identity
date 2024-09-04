@@ -19,12 +19,13 @@ public class JwtHelper
 
     public string GenerateToken(string userName, string[] roles)
     {
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.Name, userName),
-            // Add other claims as needed
-            new Claim(ClaimTypes.Role, string.Join(",", roles))
-        };
+        var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.Name, userName)
+    };
+
+        // Add each role as a separate claim
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(_secretKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

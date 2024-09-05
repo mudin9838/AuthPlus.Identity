@@ -8,8 +8,11 @@ public static class AuthorizationPolicies
     {
         services.AddAuthorization(options =>
         {
+            options.AddPolicy("RequireAdminOrUserRole", policy =>
+               policy.RequireRole(RoleConstants.AdminRole, RoleConstants.UserRole));
+
             options.AddPolicy("RequireAdminRole", policy =>
-                policy.RequireRole(RoleConstants.AdminRole));
+               policy.RequireRole(RoleConstants.AdminRole));
 
             options.AddPolicy("RequireUserRole", policy =>
                 policy.RequireRole(RoleConstants.UserRole));

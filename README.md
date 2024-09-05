@@ -113,7 +113,7 @@ public class FacebookAuthProvider : IExternalAuthProvider
 
 
 
-   //Use Authorization policies your controllers or actions:
+   //Use Authorization policies your controllers or actions: 
      By default, the package includes the following authorization policies:
 
      RequireAdminRole: Requires the user to have the "Admin" role.
@@ -126,6 +126,18 @@ public class FacebookAuthProvider : IExternalAuthProvider
                [Authorize(Policy = "RequireAdminRole")]
                [HttpGet("admin")]
                public IActionResult GetAdminData()
+               {
+               return Ok("Admin data.");
+               }
+               [Authorize(Policy = "RequireAdminOrUserRole")]
+               [HttpGet("admin")]
+               public IActionResult GetAdminOrUserData()
+               {
+               return Ok("Admin data.");
+               }
+               [Authorize(Policy = "RequireManagerRole")] //assume you have extended global authorization policy and create your own RequireManagerRole policy
+               [HttpGet("admin")]
+               public IActionResult GetManagerData()
                {
                return Ok("Admin data.");
                }
@@ -197,15 +209,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 
 //Add  authorization policies
 
-builder.Services.AddAuthorizationPolicies();
-// Add additional custom policies
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("RequireUserRole", policy =>
-        policy.RequireRole(RoleConstants.AdminRole, RoleConstants.UserRole));
-    options.AddPolicy("RequireAdminRole", policy =>
-       policy.RequireRole(RoleConstants.AdminRole));
-});
+builder.Services.AddAuthorizationPolicies();  //if you have own additional policy, you can extend and replace AddAuthorizationPolicies with you class name 
 
 
 // Add other services and configure middleware
@@ -214,7 +218,7 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline
 app.UseAuthentication();
-app.UseAuthorization();
+app.MapControllers().RequireAuthorization("RequireAdminOrUserRole");
 
 app.MapControllers();
 

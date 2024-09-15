@@ -54,7 +54,7 @@ public class AuthService : IAuthService
             };
         }
 
-        var roles = registerDto.Roles ?? ["User"];
+        var roles = registerDto.Roles ?? new[] { "User" };
         await _userManager.AddToRolesAsync(user, roles);
 
         // Generate email confirmation token
@@ -66,8 +66,9 @@ public class AuthService : IAuthService
         var body = $"Please confirm your account by clicking this link: <a href='{confirmationLink}'>Confirm Email</a>";
         await _emailService.SendEmailAsync(user.Email, subject, body);
 
-        var jwtToken = _jwtHelper.GenerateToken(user.UserName, roles);
-        var refreshToken = Guid.NewGuid().ToString(); // Simplified refresh token generation
+        // Generate token with user ID
+        var jwtToken = _jwtHelper.GenerateToken(user.Id, user.UserName, roles); // Pass user ID
+        var refreshToken = Guid.NewGuid().ToString(); // Generate refresh token
 
         return new AuthenticationResult
         {
@@ -79,6 +80,7 @@ public class AuthService : IAuthService
             ProfileImageUrl = user.ProfileImageUrl
         };
     }
+
     public async Task<AuthenticationResult> LoginAsync(LoginDto loginDto)
     {
         var user = await _userManager.FindByNameAsync(loginDto.UserName);
@@ -102,8 +104,8 @@ public class AuthService : IAuthService
         }
 
         var roles = await _userManager.GetRolesAsync(user);
-        var token = _jwtHelper.GenerateToken(user.UserName, roles.ToArray());
-        var refreshToken = Guid.NewGuid().ToString(); // Simplified refresh token generation
+        var token = _jwtHelper.GenerateToken(user.Id, user.UserName, roles.ToArray()); // Pass user ID
+        var refreshToken = Guid.NewGuid().ToString(); // Generate refresh token
 
         return new AuthenticationResult
         {
@@ -115,7 +117,6 @@ public class AuthService : IAuthService
             ProfileImageUrl = user.ProfileImageUrl
         };
     }
-
 
     public async Task<AuthenticationResult> ExternalLoginAsync(string provider, string token)
     {
@@ -163,8 +164,8 @@ public class AuthService : IAuthService
         }
 
         var roles = await _userManager.GetRolesAsync(user);
-        var jwtToken = _jwtHelper.GenerateToken(user.UserName, roles.ToArray());
-        var refreshToken = Guid.NewGuid().ToString(); // Simplified refresh token generation
+        var jwtToken = _jwtHelper.GenerateToken(user.Id, user.UserName, roles.ToArray()); // Pass user ID
+        var refreshToken = Guid.NewGuid().ToString(); // Generate refresh token
 
         return new AuthenticationResult
         {
@@ -176,6 +177,7 @@ public class AuthService : IAuthService
             ProfileImageUrl = user.ProfileImageUrl
         };
     }
+
     public async Task<IdentityResult> ConfirmEmailAsync(string token, string userId)
     {
         var user = await _userManager.FindByIdAsync(userId);
@@ -183,9 +185,9 @@ public class AuthService : IAuthService
             ? IdentityResult.Failed(new IdentityError { Description = "Invalid user ID." })
             : await _userManager.ConfirmEmailAsync(user, token);
     }
+
     public async Task<AuthenticationResult> RefreshTokenAsync(RefreshTokenDto refreshTokenDto)
     {
-        // Extract user name from the refresh token
         var user = await _userManager.FindByNameAsync(refreshTokenDto.UserName);
         if (user == null)
         {
@@ -196,7 +198,7 @@ public class AuthService : IAuthService
             };
         }
 
-        // Verify the refresh token (you would need to implement actual verification logic)
+        // Verify the refresh token (implement actual verification logic)
         if (refreshTokenDto.RefreshToken != "expected-refresh-token") // Placeholder check
         {
             return new AuthenticationResult
@@ -207,7 +209,7 @@ public class AuthService : IAuthService
         }
 
         var roles = await _userManager.GetRolesAsync(user);
-        var token = _jwtHelper.GenerateToken(user.UserName, roles.ToArray());
+        var token = _jwtHelper.GenerateToken(user.Id, user.UserName, roles.ToArray()); // Pass user ID
         var newRefreshToken = Guid.NewGuid().ToString(); // Generate new refresh token
 
         return new AuthenticationResult
@@ -251,8 +253,8 @@ public class AuthService : IAuthService
         var user = await _userManager.FindByEmailAsync(forgotPasswordDto.Email);
         if (user == null)
         {
-            // Handle the case where the user is not found
-            return; // Optionally log or handle this scenario
+            // Optionally log or handle this scenario
+            return; // User not found
         }
 
         var token = await _userManager.GeneratePasswordResetTokenAsync(user);

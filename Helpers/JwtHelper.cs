@@ -17,11 +17,12 @@ public class JwtHelper
         _audience = audience;
     }
 
-    public string GenerateToken(string userName, string[] roles)
+    public string GenerateToken(string userId, string userName, string[] roles)
     {
         var claims = new List<Claim>
     {
-        new Claim(ClaimTypes.Name, userName)
+        new Claim(ClaimTypes.Name, userName),
+        new Claim(ClaimTypes.NameIdentifier, userId)
     };
 
         // Add each role as a separate claim

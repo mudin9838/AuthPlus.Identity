@@ -13,7 +13,7 @@
 		<Authors>Muhdin Mussema</Authors>
 		<Company>Self Employed</Company>
 		<Description>AuthPlus.Identity is a .NET 8 class library designed for user authentication and authorization management.</Description>
-		<PackageTags>authentication authorization identity</PackageTags>
+		<PackageTags>authentication;authorization;identity;jwt;postgresql;sqlserver</PackageTags>
 		<RepositoryUrl>https://github.com/mudin9838/AuthPlus.Identity</RepositoryUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 	</PropertyGroup>
@@ -50,9 +50,6 @@
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 	</ItemGroup>
 	<ItemGroup>
-		<None Update="README.md">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
+		<None Include="README.md" Pack="true" PackagePath="" />
 	</ItemGroup>
 </Project>

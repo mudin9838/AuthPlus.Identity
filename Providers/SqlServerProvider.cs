@@ -8,6 +8,6 @@ public sealed class SqlServerProvider : IDatabaseProvider
 {
     public void Configure(DbContextOptionsBuilder options, IConfiguration config)
     {
-        options.UseSqlServer(config.GetConnectionString("Default"));
+        options.UseSqlServer(config.GetConnectionString("DefaultConnection"));
     }
 }

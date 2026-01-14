@@ -7,6 +7,6 @@ public sealed class PostgresProvider : IDatabaseProvider
 {
     public void Configure(DbContextOptionsBuilder options, IConfiguration config)
     {
-        options.UseNpgsql(config.GetConnectionString("Default"));
+        options.UseNpgsql(config.GetConnectionString("DefaultConnection"));
     }
 }

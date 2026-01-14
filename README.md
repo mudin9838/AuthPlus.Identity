@@ -15,7 +15,7 @@
 - External Authentication Providers (Google, Facebook, LinkedIn, etc.)
 - Extendable Validators and Policies
 - Ready-to-use Controllers and Endpoints
-- Supports SQL Server, PostgreSQL, MySQL (via EF Core)
+- Supports SQL Server, PostgreSQL (via EF Core)
 
 ---
 
@@ -150,6 +150,29 @@ You can extend and customize the library:
 - **ApplicationUser**: Add new properties to your user class.
 - **Email Service**: Implement `IEmailService` for custom email logic.
 - **External Providers**: Implement `IExternalAuthProvider` for social logins.
+
+---
+
+## Optional: Override Default Validators
+
+```csharp
+public class CustomRegisterDtoValidator : RegisterDtoValidator
+{
+    public CustomRegisterDtoValidator()
+    {
+        RuleFor(x => x.Password)
+            .Must(p => p.Contains("@"))
+            .WithMessage("Password must contain '@'.");
+
+        RuleFor(x => x.Password)
+            .Matches(@"\d")
+            .WithMessage("Password must contain at least one number.");
+    }
+}
+
+// Register in Program.cs to replace default validator
+builder.Services.AddTransient<IBaseValidator<RegisterDto>, CustomRegisterDtoValidator>();
+```
 
 ---
 

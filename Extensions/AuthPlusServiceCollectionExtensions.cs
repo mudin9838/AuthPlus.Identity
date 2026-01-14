@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using System.Text;
 
 namespace AuthPlus.Identity.Extensions;
@@ -45,20 +46,25 @@ public static class AuthPlusServiceCollectionExtensions
                           ?? throw new InvalidOperationException("JwtSettings missing");
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(o =>
-            {
-                o.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = jwtSettings.Issuer,
-                    ValidAudience = jwtSettings.Audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtSettings.SecretKey))
-                };
-            });
+     .AddJwtBearer(o =>
+     {
+         o.TokenValidationParameters = new TokenValidationParameters
+         {
+             ValidateIssuer = true,
+             ValidateAudience = true,
+             ValidateLifetime = true,
+             ValidateIssuerSigningKey = true,
+             ValidIssuer = jwtSettings.Issuer,
+             ValidAudience = jwtSettings.Audience,
+             IssuerSigningKey = new SymmetricSecurityKey(
+                 Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
+
+             // Map the claims correctly
+             RoleClaimType = ClaimTypes.Role,
+             NameClaimType = ClaimTypes.Name
+         };
+     });
+
 
         services.AddSingleton(new JwtHelper(jwtSettings.SecretKey, jwtSettings.Issuer, jwtSettings.Audience));
 

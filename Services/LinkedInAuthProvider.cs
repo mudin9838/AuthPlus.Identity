@@ -3,6 +3,7 @@ using AuthPlus.Identity.Interfaces;
 using Newtonsoft.Json.Linq;
 
 namespace AuthPlus.Identity.Services;
+
 public class LinkedInAuthProvider : IExternalAuthProvider
 {
     private readonly HttpClient _httpClient;

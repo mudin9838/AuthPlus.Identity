@@ -1,64 +1,46 @@
-﻿# AuthPlus.Identity
+# AuthPlus.Identity
 
-AuthPlus.Identity is a .NET 8 class library designed to simplify user authentication and authorization management.
+`AuthPlus.Identity` is a **.NET 8+ class library** designed to simplify **user authentication and authorization** in your ASP.NET Core applications. It provides ready-to-use APIs for users, roles, JWT authentication, email confirmation, password reset, and external login providers.
+
+---
 
 ## Features
 
 - User Registration and Login
-- User Management
-- Password Reset
-- Role Management
+- Password Reset and Email Confirmation
+- User Management (CRUD)
+- Role Management (CRUD, assign/remove roles)
 - JWT-Based Authentication
 - Configurable Email Service
-- Extendable
+- External Authentication Providers (Google, Facebook, LinkedIn, etc.)
+- Extendable Validators and Policies
+- Ready-to-use Controllers and Endpoints
+- Supports SQL Server, PostgreSQL, MySQL (via EF Core)
+
+---
 
 ## Getting Started
 
 ### Prerequisites
 
-- .NET 8 SDK
+- .NET 8 SDK or later
 - NuGet Package Manager
 
 ### Installation
 
-Add the AuthPlus.Identity package to your .NET 8 project using NuGet:
-
-````bash
-dotnet add package AuthPlus.Identity
-
-### # AuthPlus.Identity
-
-AuthPlus.Identity is a .NET 8 class library designed to simplify user authentication and authorization management.
-
-## Features
-
-- User Registration and Login
-- User Management
-- Password Reset
-- Role Management
-- JWT-Based Authentication
-- Configurable Email Service
-- Extendable
-
-
-## Getting Started
-
-### Prerequisites
-
-- .NET 8 SDK
-- NuGet Package Manager
-
-### Installation
-
-Add the AuthPlus.Identity package to your .NET 8 project using NuGet:
+Add the package to your project:
 
 ```bash
 dotnet add package AuthPlus.Identity
+```
 
+---
 
-# Configuration
-### Add configuration settings to your appsettings.json file:
+## Configuration
 
+Add the following settings to your `appsettings.json`:
+
+```json
 {
   "JwtSettings": {
     "SecretKey": "your-secret-key",
@@ -71,165 +53,107 @@ dotnet add package AuthPlus.Identity
     "SmtpPort": 587,
     "SmtpUser": "your-email@example.com",
     "SmtpPassword": "your-email-password",
-    "BaseUrl": "your base url"
+    "BaseUrl": "https://your-app-url"
+  },
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=.;Database=AuthDb;Trusted_Connection=True;"
   }
-
-//you can add your external service provider by inherit IExternalAuthProvider e.g.
-FacebookAuthProvider.cs:
-public class FacebookAuthProvider : IExternalAuthProvider
-{
-    private readonly HttpClient _httpClient;
-
-    public FacebookAuthProvider(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
-    }
-
-    public async Task<ExternalUserInfo> AuthenticateAsync(string accessToken)
-    {
-        // Call Facebook's API to get user info
-        var response = await _httpClient.GetAsync($"https://graph.facebook.com/me?access_token={accessToken}&fields=id,name,email,picture");
-        response.EnsureSuccessStatusCode();
-
-        var content = await response.Content.ReadAsStringAsync();
-        var userData = JObject.Parse(content);
-
-        // Parse the response
-        var email = userData["email"]?.ToString();
-        var name = userData["name"]?.ToString();
-        var profilePictureUrl = userData["picture"]?["data"]?["url"]?.ToString();
-
-        return new ExternalUserInfo
-        {
-            Email = email,
-            Name = name,
-            ProfilePictureUrl = profilePictureUrl
-        };
-    }
 }
- //then register in startp/program.cs
- // Register custom external authentication provider (Facebook)
-                services.AddHttpClient<FacebookAuthProvider>();
+```
 
+> **Optional**: Add external login providers by implementing `IExternalAuthProvider` (e.g., Google, Facebook, LinkedIn).
 
+---
 
-   //Use Authorization policies your controllers or actions: 
-     By default, the package includes the following authorization policies:
+## Setup in `Program.cs`
 
-     RequireAdminRole: Requires the user to have the "Admin" role.
-     RequireUserRole: Requires the user to have the "User" role.
-
-           [ApiController]
-           [Route("api/[controller]")]
-           public class SomeController : ControllerBase
-           {
-               [Authorize(Policy = "RequireAdminRole")]
-               [HttpGet("admin")]
-               public IActionResult GetAdminData()
-               {
-               return Ok("Admin data.");
-               }
-               [Authorize(Policy = "RequireAdminOrUserRole")]
-               [HttpGet("admin")]
-               public IActionResult GetAdminOrUserData()
-               {
-               return Ok("Admin data.");
-               }
-               [Authorize(Policy = "RequireManagerRole")] //assume you have extended global authorization policy and create your own RequireManagerRole policy
-               [HttpGet("admin")]
-               public IActionResult GetManagerData()
-               {
-               return Ok("Admin data.");
-               }
-
-   //then register in startup/program.cs like below
-
-'
-
-
-## Setting Up
-### In your Program.cs, configure the services and middleware:
-
+```csharp
 var builder = WebApplication.CreateBuilder(args);
+
+// Add AuthPlus Identity (select your database provider)
+builder.Services.AddAuthPlusIdentity(builder.Configuration, options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    // options.UsePostgres(...);
+    // options.UseMySql(...);
+});
 
 // Register external authentication providers
 builder.Services.AddHttpClient<GoogleAuthProvider>();
-builder.Services.AddHttpClient<MicrosoftAuthProvider>();
-builder.Services.AddHttpClient<LinkedInAuthProvider>();
-// AuthService and external providers
-builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddHttpClient<FacebookAuthProvider>();
 builder.Services.AddScoped<IExternalAuthProvider, GoogleAuthProvider>();
-builder.Services.AddScoped<IExternalAuthProvider, MicrosoftAuthProvider>();
-builder.Services.AddScoped<IExternalAuthProvider, LinkedInAuthProvider>()
-// Configure EmailSettings
-var emailSettingsSection = builder.Configuration.GetSection("EmailSettings");
-builder.Services.Configure<EmailSettings>(emailSettingsSection);
-
-// Register EmailService with EmailSettings
-builder.Services.AddSingleton<IEmailService>(serviceProvider =>
-{
-    var emailSettings = serviceProvider.GetRequiredService<IOptions<EmailSettings>>().Value;
-    return new EmailService(emailSettings.SmtpServer, emailSettings.SmtpPort, emailSettings.SmtpUser, emailSettings.SmtpPassword);
-});
-
-// Configure JwtHelper
-var jwtSettingsSection = builder.Configuration.GetSection("JwtSettings");
-builder.Services.Configure<JwtSettings>(jwtSettingsSection);
-builder.Services.AddSingleton<JwtHelper>(serviceProvider =>
-{
-    var jwtSettings = serviceProvider.GetRequiredService<IOptions<JwtSettings>>().Value;
-    return new JwtHelper(jwtSettings.SecretKey, jwtSettings.Issuer, jwtSettings.Audience);
-});
-// Register default validators
-services.AddTransient<IBaseValidator<LoginDto>, LoginDtoValidator>();
-services.AddTransient<IBaseValidator<RegisterDto>, RegisterDtoValidator>();
-services.AddTransient<IBaseValidator<ResetPasswordDto>, ResetPasswordDtoValidator>();
-services.AddTransient<IBaseValidator<UserDto>, UserDtoValidator>();
-//// A override or add  own validators
-//services.AddTransient(typeof(IBaseValidator<>), typeof(BaseValidator<>));
-
-
-//you can provide  own validator by overriding the existing on create a new class
-//public class CustomRegisterDtoValidator : RegisterDtoValidator
-//{
-  // public CustomRegisterDtoValidator()
-  // {
-       // Add or override rules here
-      // RuleFor(x => x.Password).Must(password => password.Contains("@")).WithMessage("Password must contain '@'.");
-   //}
-//}
-
-////services.AddTransient<IBaseValidator<RegisterDto>, CustomRegisterDtoValidator>();
-
-
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddScoped<IRoleService, RoleService>();
-builder.Services.AddScoped<IUserService, UserService>();
-
-//Add  authorization policies
-
-builder.Services.AddAuthorizationPolicies();  //if you have own additional policy, you can extend and replace AddAuthorizationPolicies with you class name 
-
-
-// Add other services and configure middleware
+builder.Services.AddScoped<IExternalAuthProvider, FacebookAuthProvider>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
 app.UseAuthentication();
-app.MapControllers().RequireAuthorization("RequireAdminOrUserRole");
+app.UseAuthorization();
 
 app.MapControllers();
-
 app.Run();
+```
 
+> `AddAuthPlusIdentity` automatically registers:
+> - Identity services
+> - JWT authentication
+> - Email service
+> - IUserService, IRoleService, IAuthService
+> - Policies (`RequireAdminRole`, `RequireUserRole`, `RequireAdminOrUserRole`)
+> - Validators for DTOs (`LoginDto`, `RegisterDto`, `UserDto`, `ResetPasswordDto`)
 
-## Usage
+---
 
-### Register a User
+## Controllers & Endpoints
 
-To register a new user, use the following endpoint:
+### AuthController
+
+| Endpoint                    | Method | Description |
+|------------------------------|--------|-------------|
+| `/api/auth/register`         | POST   | Register a new user |
+| `/api/auth/login`            | POST   | Login a user |
+| `/api/auth/external-login`   | POST   | Login via external provider (Google, Facebook, etc.) |
+| `/api/auth/refresh-token`    | POST   | Refresh JWT token |
+| `/api/auth/forgot-password`  | POST   | Send password reset email |
+| `/api/auth/reset-password`   | POST   | Reset user password |
+
+### UserController
+
+| Endpoint                                     | Method | Authorization | Description |
+|----------------------------------------------|--------|---------------|-------------|
+| `/api/user`                                  | GET    | Admin          | Get all users |
+| `/api/user/{id}`                             | GET    | User/Admin     | Get user by ID |
+| `/api/user`                                  | POST   | Admin          | Create a user |
+| `/api/user/{id}`                             | PUT    | User/Admin     | Update user info |
+| `/api/user/{id}`                             | DELETE | Admin          | Delete a user |
+| `/api/user/{userId}/roles/{roleName}`       | POST   | Admin          | Assign role to user |
+| `/api/user/{userId}/roles/{roleName}`       | DELETE | Admin          | Remove role from user |
+| `/api/user/confirm-email?token=&userId=`   | GET    | Anonymous      | Confirm user email |
+
+### RoleController
+
+| Endpoint           | Method | Authorization | Description |
+|-------------------|--------|---------------|-------------|
+| `/api/role/all`    | GET    | Admin          | Get all roles |
+| `/api/role/{id}`   | GET    | Admin          | Get role by ID |
+| `/api/role`        | POST   | Admin          | Create a new role |
+| `/api/role/{id}`   | PUT    | Admin          | Update role |
+| `/api/role/{id}`   | DELETE | Admin          | Delete role |
+
+---
+
+## Extending
+
+You can extend and customize the library:
+
+- **Roles & Policies**: Extend `AuthorizationPolicies` or add custom roles.
+- **Validators**: Override or create custom DTO validators.
+- **ApplicationUser**: Add new properties to your user class.
+- **Email Service**: Implement `IEmailService` for custom email logic.
+- **External Providers**: Implement `IExternalAuthProvider` for social logins.
+
+---
+
+## Example: Register User in Controller
 
 ```csharp
 [HttpPost("register")]
@@ -238,48 +162,12 @@ public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
     var result = await _authService.RegisterAsync(registerDto);
     return !result.Succeeded ? BadRequest(result.Errors) : Ok(result);
 }
+```
 
+---
 
-[HttpPost("login")]
-public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
-{
-    var result = await _authService.LoginAsync(loginDto);
-    return !result.Succeeded ? Unauthorized(result.Errors) : Ok(result);
-}
+## License & Support
 
-[HttpPost("reset-password")]
-public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto resetPasswordDto)
-{
-    var result = await _authService.ResetPasswordAsync(resetPasswordDto);
-    return !result.Succeeded ? BadRequest(result.Errors) : Ok(result);
-}
+- MIT License  
+- For questions or support: [muhdinmussema@gmail.com](mailto:muhdinmussema@gmail.com)
 
-````
-
-## Extending
-
-You can extend and customize the library according to your needs:
-
-- **Roles and Policies**: Customize `RoleConstants` and `AuthorizationPolicies`.
-- **Validators**: Modify or extend validators located in the `Validators` folder.
-- **ApplicationUser**: Extend the `ApplicationUser` class to add additional properties.
-- **Email Service**: Implement your own email logic by extending the `IEmailService` interface.
-
-## Contributing
-
-We welcome contributions! To contribute:
-
-1. **Fork** the repository.
-2. **Create** a new branch (`git checkout -b feature/your-feature`).
-3. **Make** your changes.
-4. **Commit** your changes (`git commit -am 'Add new feature'`).
-5. **Push** to the branch (`git push origin feature/your-feature`).
-6. **Create** a Pull Request.
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-## Contact
-
-For support or questions, please contact [muhdinmussema@gmail.com](mailto:muhdinmussema@gmail.com).

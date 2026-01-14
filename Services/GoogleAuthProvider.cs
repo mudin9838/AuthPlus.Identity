@@ -3,6 +3,7 @@ using AuthPlus.Identity.Interfaces;
 using Newtonsoft.Json;
 
 namespace AuthPlus.Identity.Services;
+
 public class GoogleAuthProvider : IExternalAuthProvider
 {
     private readonly HttpClient _httpClient;

@@ -2,20 +2,23 @@
 
 namespace AuthPlus.Identity.Extensions;
 
-public static class AuthorizationPolicies
+public static class AuthorizationExtensions
 {
-    public static void AddAuthorizationPolicies(this IServiceCollection services)
+    public static IServiceCollection AddPolicies(
+        this IServiceCollection services)
     {
         services.AddAuthorization(options =>
         {
-            options.AddPolicy("RequireAdminOrUserRole", policy =>
-               policy.RequireRole(RoleConstants.AdminRole, RoleConstants.UserRole));
+            options.AddPolicy("RequireAdminRole",
+                p => p.RequireRole("Admin"));
 
-            options.AddPolicy("RequireAdminRole", policy =>
-               policy.RequireRole(RoleConstants.AdminRole));
+            options.AddPolicy("RequireUserRole",
+                p => p.RequireRole("User"));
 
-            options.AddPolicy("RequireUserRole", policy =>
-                policy.RequireRole(RoleConstants.UserRole));
+            options.AddPolicy("RequireAdminOrUserRole",
+                p => p.RequireRole("Admin", "User"));
         });
+
+        return services;
     }
 }

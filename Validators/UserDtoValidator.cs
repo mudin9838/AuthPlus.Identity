@@ -2,6 +2,7 @@
 using FluentValidation;
 
 namespace AuthPlus.Identity.Validators;
+
 public class UserDtoValidator : BaseValidator<UserDto>
 {
     public UserDtoValidator()

@@ -42,31 +42,79 @@ public static class AuthPlusServiceCollectionExtensions
             .AddDefaultTokenProviders();
 
         // ---------------- JWT ----------------
-        var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>()
-                          ?? throw new InvalidOperationException("JwtSettings missing");
+        // FIRST: Load JWT settings BEFORE using them
+        var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>();
+        if (jwtSettings == null)
+        {
+            throw new InvalidOperationException("JwtSettings missing from configuration.");
+        }
 
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-     .AddJwtBearer(o =>
-     {
-         o.TokenValidationParameters = new TokenValidationParameters
-         {
-             ValidateIssuer = true,
-             ValidateAudience = true,
-             ValidateLifetime = true,
-             ValidateIssuerSigningKey = true,
-             ValidIssuer = jwtSettings.Issuer,
-             ValidAudience = jwtSettings.Audience,
-             IssuerSigningKey = new SymmetricSecurityKey(
-                 Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
+        // Validate required JWT settings
+        if (string.IsNullOrEmpty(jwtSettings.SecretKey))
+            throw new ArgumentException("JwtSettings.SecretKey is required");
+        if (string.IsNullOrEmpty(jwtSettings.Issuer))
+            throw new ArgumentException("JwtSettings.Issuer is required");
+        if (string.IsNullOrEmpty(jwtSettings.Audience))
+            throw new ArgumentException("JwtSettings.Audience is required");
 
-             // Map the claims correctly
-             RoleClaimType = ClaimTypes.Role,
-             NameClaimType = ClaimTypes.Name
-         };
-     });
+        // SECOND: Configure Authentication with JWT Bearer
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.RequireHttpsMetadata = false;
+            options.SaveToken = true;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtSettings.Issuer,
+                ValidAudience = jwtSettings.Audience,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
 
+                // IMPORTANT: Set claim types
+                RoleClaimType = ClaimTypes.Role,
+                NameClaimType = ClaimTypes.Name,
 
-        services.AddSingleton(new JwtHelper(jwtSettings.SecretKey, jwtSettings.Issuer, jwtSettings.Audience));
+                // Allow some clock skew
+                ClockSkew = TimeSpan.FromMinutes(5)
+            };
+
+            // Add debug events
+            options.Events = new JwtBearerEvents
+            {
+                OnAuthenticationFailed = context =>
+                {
+                    Console.WriteLine($"Authentication failed: {context.Exception}");
+                    return Task.CompletedTask;
+                },
+                OnTokenValidated = context =>
+                {
+                    Console.WriteLine($"Token validated for user: {context.Principal?.Identity?.Name}");
+                    return Task.CompletedTask;
+                },
+                OnChallenge = context =>
+                {
+                    Console.WriteLine($"OnChallenge: {context.Error}, {context.ErrorDescription}");
+                    return Task.CompletedTask;
+                },
+                OnMessageReceived = context =>
+                {
+                    Console.WriteLine($"Token received: {context.Token?.Substring(0, Math.Min(20, context.Token?.Length ?? 0))}...");
+                    return Task.CompletedTask;
+                }
+            };
+        });
+
+        // THIRD: Register JwtHelper with the SAME settings
+        services.AddSingleton<JwtHelper>(sp =>
+            new JwtHelper(jwtSettings.SecretKey, jwtSettings.Issuer, jwtSettings.Audience));
 
         services.AddPolicies();
 
@@ -89,7 +137,6 @@ public static class AuthPlusServiceCollectionExtensions
         services.AddScoped<IRoleService, RoleService>();
 
         // ---------------- VALIDATORS ----------------
-        // Default validators (can be overridden in UI)
         TryAddTransientIfNotRegistered<IBaseValidator<LoginDto>, LoginDtoValidator>(services);
         TryAddTransientIfNotRegistered<IBaseValidator<RegisterDto>, RegisterDtoValidator>(services);
         TryAddTransientIfNotRegistered<IBaseValidator<ResetPasswordDto>, ResetPasswordDtoValidator>(services);
@@ -98,7 +145,6 @@ public static class AuthPlusServiceCollectionExtensions
         return services;
     }
 
-    // Helper: register a service only if it's not already registered
     private static void TryAddTransientIfNotRegistered<TService, TImplementation>(IServiceCollection services)
         where TImplementation : class, TService
         where TService : class

@@ -43,9 +43,9 @@ Add the following settings to your `appsettings.json`:
 ```json
 {
   "JwtSettings": {
-    "SecretKey": "your-secret-key",
-    "Issuer": "your-issuer",
-    "Audience": "your-audience",
+   "SecretKey": "your-32-character-super-secret-key-here", // Min 32 chars
+    "Issuer": "your-app-name",
+    "Audience": "your-app-clients",
     "ExpirationMinutes": 60
   },
   "EmailSettings": {
@@ -78,14 +78,18 @@ builder.Services.AddAuthPlusIdentity(builder.Configuration, options =>
     // options.UseMySql(...);
 });
 
-// Register external authentication providers
+// Register external authentication providers (optional)
 builder.Services.AddHttpClient<GoogleAuthProvider>();
-builder.Services.AddHttpClient<FacebookAuthProvider>();
+builder.Services.AddHttpClient<MicrosoftAuthProvider>();
 builder.Services.AddScoped<IExternalAuthProvider, GoogleAuthProvider>();
-builder.Services.AddScoped<IExternalAuthProvider, FacebookAuthProvider>();
+builder.Services.AddScoped<IExternalAuthProvider, MicrosoftAuthProvider>();
+
+// Add controllers
+builder.Services.AddControllers();
 
 var app = builder.Build();
-
+// IMPORTANT: Middleware must be in correct order
+app.UseRouting(); // This must come first!
 app.UseAuthentication();
 app.UseAuthorization();
 
